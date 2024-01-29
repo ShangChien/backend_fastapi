@@ -5,15 +5,17 @@ from unimol_tools import MolPredict, UniMolRepr
 from pathlib import Path as P
 import logging
 import copy
+import os
 
 logger = logging.getLogger(__name__)
-
+## need pre set golbal var in ~/.bashrc: export Unimol_Task_Path="/home/sanyue/webapp/backEnd/model/unimol/Uni-Mol-main/unimol_tools/unimol_tools/jobs"
+my_variable = os.getenv('Unimol_Task_Path', "/home/sanyue/webapp/backEnd/model/unimol/Uni-Mol-main/unimol_tools/unimol_tools/jobs")
 models={
-    'homo': MolPredict(load_model=P(P(__file__).parent, './jobs/homo/exp')),
-    'lumo': MolPredict(load_model=P(P(__file__).parent, './jobs/lumo/exp')),
-    'eg'  : MolPredict(load_model=P(P(__file__).parent, './jobs/eg/exp')),
-    't1'  : MolPredict(load_model=P(P(__file__).parent, './jobs/t1/exp')),
-    's1'  : MolPredict(load_model=P(P(__file__).parent, './jobs/s1/exp')),
+    'homo': MolPredict(load_model=P(my_variable, 'homo/exp')),
+    'lumo': MolPredict(load_model=P(my_variable, 'lumo/exp')),
+    'eg'  : MolPredict(load_model=P(my_variable, 'eg/exp')),
+    't1'  : MolPredict(load_model=P(my_variable, 't1/exp')),
+    's1'  : MolPredict(load_model=P(my_variable, 's1/exp')),
     'repr': UniMolRepr(data_type='molecule')
 }
     
@@ -21,8 +23,9 @@ def inference(data: dataUnimol) -> RES[dataUnimol]:
     global models
     logger.info('input data:', data.model_dump_json())
     inputData = {}
-    RES_result = RES[dataUnimol]()
-    RES_result.data = copy.deepcopy(data)
+    data.results = {}
+    RES_result = RES[dataUnimol](data=copy.deepcopy(data))
+    
 
     # 前处理获取3d数据
     if data.atoms and data.coordinates:
@@ -63,7 +66,10 @@ def inference(data: dataUnimol) -> RES[dataUnimol]:
                 results = _results.flatten().tolist()
             else:
                 logger.error(f'unimol model type error: {model}')
-            RES_result.data.results[model] = results
+            if RES_result.data and isinstance(RES_result.data.results,dict) :
+                RES_result.data.results[model] = results
+            else:
+                RES_result.error = RES_result.error + 'RES_result.data type error'
             logger.info(f'success run unimol inference: {model}; total mol-num: {len(results)}')
     else:
         error_str:str = 'input data wrong: models is invalid'

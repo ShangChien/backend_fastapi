@@ -3,7 +3,7 @@ from ase.optimize import FIRE
 from pathlib import Path
 from ase import Atoms
 from tblite.ase import TBLite
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, Optional, TypeVar, TypeGuard
 from pydantic import BaseModel
 import logging
 
@@ -18,13 +18,13 @@ etkdg.optimizerForceTol = 0.0135
 etkdg.useRandomCoords = True
 
 class dataUnimol(BaseModel):
-    models: list[str] = []
-    names : list[str] = []
-    smiles: list[str] = []
-    molBlocks: list[str] = []
-    atoms : list[list[str]] = [] 
-    coordinates : list[list[list[float]]] = []
-    results : dict[str, list[int|float|str]] = {} ## { 'model1': [1,2,3] }
+    models: list[str]|None = None
+    names : list[str]|None = None
+    smiles: list[str]|None = None
+    molBlocks: list[str]|None = None
+    atoms : list[list[str]]|None = None
+    coordinates : list[list[list[float]]]|None = None
+    results : dict[str, list[int|float|str]]|None = None ## { 'model1': [1,2,3] }
 
 T = TypeVar('T')
 class RES(BaseModel, Generic[T]):
@@ -32,17 +32,20 @@ class RES(BaseModel, Generic[T]):
     data: Optional[T] = None
     error: str= ''
 
-def calculator(aseMol:Atoms, method="GFN2-xTB", criteria=0.05, steps=100) -> RES[Atoms]:
+def is_not_None(val: dict[str, str]|None) -> TypeGuard[dict[str, str]]:
+    return val is not None 
+
+def calculator(aseMol:Atoms, method="GFN2-xTB", criteria=0.05, steps=100) -> RES[Any]:
     try:
         #如果不存在opt.log文件，则使用pathlib创建该文件
         if not Path('opt.log').exists():
             Path('opt.log').touch()
         aseMol.calc = TBLite(method=method, verbosity=0)
         FIRE(aseMol, logfile='opt.log').run(fmax = criteria,steps = steps)
-        return RES[Atoms](data = aseMol)
+        return RES[Any](data = aseMol)
     except Exception as e:
         logger.error(e)
-        return RES[Atoms](success=False, data = aseMol, error = str(e))
+        return RES[Any](success=False, data = aseMol, error = str(e))
     
 def xTBconvertor(molBlock:str|None=None, smi:str|None=None) -> RES[dict]: ## 2D(molBlock) to 3D(dict)
     aseList:list[Atoms] = []
