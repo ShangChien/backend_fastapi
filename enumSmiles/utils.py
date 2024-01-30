@@ -21,24 +21,24 @@ class core(BaseModel):
     enumBonds:dict[int, enumSetting]={}
 
 class molecule(BaseModel):
-  id: int
-  smiles: str
-  atoms: dict[int,list[int]]={}
-  bonds: dict[int,list[int]]={}
+    id: int
+    smiles: str
+    atoms: dict[int,list[int]]={}
+    bonds: dict[int,list[int]]={}
     
 class enumData(BaseModel):
-  core: core
-  ligands: list[molecule]
+    core: core
+    ligands: list[molecule]
 
 class layout(BaseModel):
-  cols:int=10
-  rows:int=20
-  scale:float=1.0
-  singlePage:bool=False
+    cols:int=10
+    rows:int=20
+    scale:float=1.0
+    singlePage:bool=False
 
 class smi2cdx(BaseModel):
-  smiles:list[str]=[]
-  layout:layout
+    smiles:list[str]=[]
+    layout:layout
 
 def add_dummy2smi(mol:Any,i:int)->list[str|int]:
     dummy = Chem.Atom(0)  # type: ignore # 0 is the atomic number 
@@ -163,7 +163,7 @@ def layout_cdxml(cdxmls:list[Any],cols:int,rows:int=-1,single_page:bool=True,sca
     import math
     length = len(cdxmls)
     props = [[cdxml_slide_generator.TextProperty('index', i+1)] for i in range(length)]
-    real_rows = math.ceil(length/cols) if single_page else rows
+    real_rows: int = math.ceil(length/cols) if single_page else rows
     #logic
     slides=[]
     if single_page:
@@ -172,7 +172,7 @@ def layout_cdxml(cdxmls:list[Any],cols:int,rows:int=-1,single_page:bool=True,sca
             number_of_properties=1, 
             columns=cols, rows=real_rows, 
             slide_width=cols*10*scale, 
-            slide_height=real_rows*10*scale
+            slide_height=real_rows*10*scale 
         )
         slides.append(sg.generate_slide(cdxmls, props))
     else:
