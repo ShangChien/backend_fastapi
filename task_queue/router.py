@@ -3,7 +3,7 @@ from queue_hook import taskQueue, Task
 from fastapi.responses import JSONResponse
 from typing import TypeVar,Optional,Generic,Any
 from pydantic import BaseModel
-from functools import lru_cache
+from datetime import datetime, timedelta
 
 T = TypeVar('T')
 class RES(JSONResponse, Generic[T]):
@@ -54,8 +54,16 @@ async def modifyTask(req: Request, data: Task = Body()) -> RES[str]:
         res = f'task {data.id} is not support modified'
     return RES[str](content = res)
 
+pre_time = datetime.now()
+status_res:Any = None
 @router.get("/status" )
 async def getStatus(req: Request) -> RES[queueInfo] :
+    cur_time = datetime.now()
+    global pre_time
+    global status_res
+    if cur_time - pre_time < timedelta(seconds=5):
+        return status_res
+    pre_time = cur_time
     queue:taskQueue = req.app.state.queue
     queue_info=queueInfo(
         running = [queue.running[k] for k in queue.running],
@@ -63,4 +71,5 @@ async def getStatus(req: Request) -> RES[queueInfo] :
         canceled = [queue.canceled[k] for k in queue.canceled],
         completed = [queue.completed[k] for k in queue.completed]
     )
-    return RES[queueInfo](content=queue_info.model_dump_json())
+    status_res = RES[queueInfo](content=queue_info.model_dump_json())
+    return status_res
