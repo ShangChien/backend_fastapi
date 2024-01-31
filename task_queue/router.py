@@ -3,6 +3,7 @@ from queue_hook import taskQueue, Task
 from fastapi.responses import JSONResponse
 from typing import TypeVar,Optional,Generic,Any
 from pydantic import BaseModel
+from functools import lru_cache
 
 T = TypeVar('T')
 class RES(JSONResponse, Generic[T]):
@@ -57,21 +58,9 @@ async def modifyTask(req: Request, data: Task = Body()) -> RES[str]:
 async def getStatus(req: Request) -> RES[queueInfo] :
     queue:taskQueue = req.app.state.queue
     queue_info=queueInfo(
-        running = [
-            queue.running[k].model_dump(exclude={'func':True})
-            for k in queue.running
-        ],
-        waiting = [
-            queue.waiting[k].model_dump(exclude={'func':True})
-            for k in queue.waiting
-        ],
-        canceled = [
-            queue.canceled[k].model_dump(exclude={'func':True})
-            for k in queue.canceled
-        ],
-        completed = [
-            queue.completed[k].model_dump(exclude={'func':True})
-            for k in queue.completed
-        ]
+        running = [queue.running[k] for k in queue.running],
+        waiting = [queue.waiting[k] for k in queue.waiting ],
+        canceled = [queue.canceled[k] for k in queue.canceled],
+        completed = [queue.completed[k] for k in queue.completed]
     )
     return RES[queueInfo](content=queue_info.model_dump_json())

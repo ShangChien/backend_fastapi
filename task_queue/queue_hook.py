@@ -16,7 +16,7 @@ log: Logger = logger_config.get_logger(__name__)
 
 class Task(BaseModel):
     data: Any = None
-    func: Callable[..., Any] | None = None
+    func: str|None = None
     id: str = Field(default_factory = lambda: uuid4().hex)
     time: float = Field(default_factory= lambda: datetime.now().timestamp())
     prior: list[int] = [5,5,5,5]
@@ -96,13 +96,14 @@ class taskQueue:
     async def join(self) -> None:
         await self.queue.join()
 
+funcs: dict[str, Callable] = {'uv': sum}
 async def worker(queue: taskQueue):
     while True:
         task: Task | None = await queue.get()
         if (task is None) or (task.func is None):
             pass
         else:
-            result: Any = task.func(task.data)
+            result: Any = funcs[task.func](task.data)
             task.result = result
             await queue.task_done(task)
 
