@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Request, Body
 from dataCheck.spectrum.utils import get_peaks,pre_process
-from pydantic import BaseModel
-from typing import Any, TypeVar, Generic, Optional
+from dataCheck.spectrum.type import getUVdata, RES, UVdata
 import numpy as np
 import asyncio
 from scipy.spatial.distance import cdist
@@ -13,21 +12,6 @@ router = APIRouter(
     prefix="/spectrum", # absolute path : localhost:port/dataCheck/spectrum
     tags=["spectrum"],
 )
-
-class getUVdata(BaseModel):
-    name: str|None = None
-    index: int|None = None
-
-class UVdata(BaseModel):
-    name:str
-    raw_arr:list[Any]
-    peaks_arr:list[int|float|None|Any]|None = []
-
-T = TypeVar('T')
-class RES(BaseModel, Generic[T]):
-    success: bool = True
-    data: Optional[T] = None
-    error: str= ''
 
 @router.get("/get_fig_name_list")
 async def get_fig_name_list(req: Request) -> RES[list[str]]: 

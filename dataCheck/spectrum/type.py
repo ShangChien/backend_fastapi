@@ -1,25 +1,18 @@
-# 定义要拟合的函数列表:exp, gauss, lorentz, voigt
-# 定义损失函数：np.sum((y - y_pred) + np.maximum(0.001, 10*(y_pred - y)))
-# 定义读取excel文件函数
-# 定义数据前处理函数：归一化，返回标尺
+from typing import Any, TypeVar, Generic, Optional
+from pydantic import BaseModel
 
-### 定义寻找筛选峰值函数：
-# ...
-# 合并去重
-# 过滤低值
-# 筛选主峰
-# 密集区域稀疏化
-# ...
 
-### 迭代寻找峰值主函数：
-# ...
-# 识别峰位
-# 计算最高峰位的相关信息
-# 设置不同模型拟合函数的初猜值
-# 并行加速运行拟合函数
-# 过滤拟合失败的结果
-# 选择拟合最好的模型
-# 保存当前拟合的最优模型参数
-# 初始数据减去拟合函数的值
-# 生成新的待拟合数据
-# ...
+class getUVdata(BaseModel):
+    name: str|None = None
+    index: int|None = None
+
+class UVdata(BaseModel):
+    name:str
+    raw_arr:list[Any]
+    peaks_arr:list[int|float|None|Any]|None = []
+
+T = TypeVar('T')
+class RES(BaseModel, Generic[T]):
+    success: bool = True
+    data: Optional[T] = None
+    error: str= ''

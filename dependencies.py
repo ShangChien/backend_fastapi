@@ -36,28 +36,28 @@ class Task(BaseModel):
 
 @dataclass
 class taskQueue:
-    queue: PriorityQueue = field(default_factory=PriorityQueue)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    running: list[Task] = field(default_factory=list)
-    waiting: list[Task] = field(default_factory=list)
-    tobeCancel: list[Task] = field(default_factory=list)
-    canceled: list[Task] = field(default_factory=list)
-    completed: list[Task] = field(default_factory=list)
+    queue: PriorityQueue[Task] = field(default_factory=PriorityQueue)
+    running: dict[str, Task] = field(default_factory=dict)
+    waiting: dict[str, Task] = field(default_factory=dict)
+    tobeCancel: dict[str, Task] = field(default_factory=dict)
+    canceled: dict[str, Task] = field(default_factory=dict)
+    completed: dict[str, Task] = field(default_factory=dict)
 
     async def add(self, task: Task) -> None:
         async with self.lock:
-            self.waiting.append(task)
+            self.waiting[task.id] = task
         await self.queue.put(task)
 
     async def cancel(self, task: Task) -> bool:
-        if task in self.waiting:
+        if task.id in self.waiting:
             async with self.lock:
-                self.tobeCancel.append(task)
+                self.tobeCancel[task.id] = task
             return True
-        if task in self.running:
+        if task.id in self.running:
             await self.task_done(task)
             async with self.lock:
-                self.canceled.append(task)
+                self.canceled[task.id] = task
             return True
         else:
             return False
@@ -73,23 +73,20 @@ class taskQueue:
     async def get(self) -> Task | None:
         task: Task = await self.queue.get()
         async with self.lock:
-            self.waiting.remove(task)
-            if task in self.tobeCancel:
-                self.tobeCancel.remove(task)
-                self.canceled.append(task)
+            del self.waiting[task.id]
+            if task.id in self.tobeCancel:
+                del self.tobeCancel[task.id]
+                self.canceled[task.id] = task
                 return None
             else:
-                self.running.append(task)
+                self.running[task.id] = task
                 return task
         
     async def task_done(self, task: Task) -> bool:
         async with self.lock:
-            self.completed.append(task)
-            ## 这里的task.result和添加时的不同
-            task_copy: Task = copy.deepcopy(task)
-            task_copy.result = None
-            if task_copy in self.running:
-                self.running.remove(task_copy)
+            if task.id in self.running:
+                del self.running[task.id]
+                self.completed[task.id] = task
                 self.queue.task_done()
                 return True
             else:
