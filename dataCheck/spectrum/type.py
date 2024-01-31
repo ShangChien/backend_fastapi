@@ -15,4 +15,4 @@ T = TypeVar('T')
 class RES(BaseModel, Generic[T]):
     success: bool = True
     data: Optional[T] = None
-    error: str= ''
+    error: str = ''

@@ -9,6 +9,7 @@ router = APIRouter(
     prefix="/db",
     tags=["dataBase"],
 )
+
 @router.post("/search")
 async def search(data: list[searchItem] = Body()) -> dict[str, list[ dict[ str, int | str ] | None ]] | Any:
     result: list[dict[str, int | str] | None] = db_operate(query(data))

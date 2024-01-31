@@ -7,7 +7,7 @@ from enumSmiles.router import router as enum_router
 from db.router import router as db_router
 from unimol.router import router as unimol_router
 
-from dependencies import create_queue,destroy_queue
+from task_queue.queue_hook import create_queue,destroy_queue
 import logger_config
 from logging import Logger
 
