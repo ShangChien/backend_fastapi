@@ -1,7 +1,10 @@
 import asyncio
 import pickle
+import re
+from pathlib import Path as P
 from datetime import datetime
 from asyncio import PriorityQueue
+import subprocess
 from pydantic import BaseModel, Field
 from uuid import uuid4
 from dataclasses import dataclass,field
@@ -15,11 +18,16 @@ from logging import Logger
 log: Logger = logger_config.get_logger(__name__)
 
 class Task(BaseModel):
+    id: str = Field(default_factory = lambda: uuid4().hex)
+    stamp: float = Field(default_factory= lambda: datetime.now().timestamp())
+    name: str|None = None
     data: Any = None
     func: str|None = None
-    id: str = Field(default_factory = lambda: uuid4().hex)
-    time: float = Field(default_factory= lambda: datetime.now().timestamp())
     prior: list[int] = [5,5,5,5]
+    job_index: int = 0
+    dir_path: str| None = None
+    designer: str|None = None
+    status: str|None = "waiting"
     result: Any = None
     
     def priorValue(self) -> int:
@@ -95,6 +103,63 @@ class taskQueue:
 
     async def join(self) -> None:
         await self.queue.join()
+
+def submit_task(data: Any, func: str, name:str, dir_path: str, designer: str,stamp:float) -> int:
+    date_time = datetime.fromtimestamp(stamp)
+    data_str = date_time.strftime("%Y%m%d")
+    # 新建任务文件夹
+    path=P('/root/task',dir_path.strip(' /'),data_str,name)
+    path.mkdir(mode=0o755, parents=True, exist_ok=True)
+    # 新建分子结构文件
+    path_structure=P(path, name+'.mol')
+    path_structure.write_text(data)
+    # 新建排队脚本任务模板
+    template=func
+    path_submit = P(path, 'task_submit.queue')
+    path_submit_absolute = path_submit.absolute().as_posix()
+    path_submit.write_text(template)
+    # 提交任务
+    completed_process = subprocess.run(['qsub', path_submit_absolute], text=True, capture_output=True)
+    if completed_process.returncode == 0:
+        job_index = int(completed_process.stdout.split('.')[0])
+        return job_index
+    else:
+        log.error(f'qsub error: {completed_process.stderr}')
+        return -1
+
+def match_target(src:str,target:str) -> str:
+    match=re.search(rf'{target} = (.*)', src)
+    if match:
+        return match.group(1)
+    return 'unknown'
+
+def check_task_info(job_index: int):
+    result = subprocess.run(['qstat','-f', f'{job_index}'], text=True, capture_output=True)
+    info={}
+    if result.returncode == 0:
+        stdout= result.stdout
+        info['name']    =   match_target(stdout,'Job_Name')
+        info['owner']   =   match_target(stdout,'Job_Owner')
+        info['cput']    =   match_target(stdout,'.cput')
+        info['mem']     =   match_target(stdout,'.mem')
+        info['vmem']    =   match_target(stdout,'.vmem')
+        info['walltime']=   match_target(stdout,'.walltime')
+        info['state']   =   match_target(stdout,'job_state')
+        info['queue']   =   match_target(stdout,'queue')
+        info['server']  =   match_target(stdout,'server')
+        info['qtime']   =   datetime.strptime(
+            match_target(stdout,'qtime'),
+            "%a %b %d %H:%M:%S %Y"
+        ).timestamp()
+        info['start_time']= datetime.strptime(
+            match_target(stdout,'start_time'),
+            "%a %b %d %H:%M:%S %Y"
+        ).timestamp()
+        info['exec_host']=match_target(stdout,'exec_host').split('/')[0]
+        return info
+    else:
+        log.error(f'qstat -f {job_index} -> error: {result.stderr}')
+        return False
 
 funcs: dict[str, Callable] = {'uv': sum}
 async def worker(queue: taskQueue):
