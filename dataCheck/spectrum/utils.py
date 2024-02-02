@@ -62,9 +62,7 @@ def get_data_from_excel(file:P)-> dict[str, ndarray]:
     elif len(indices) == 0:
         raise Exception(f'{filename}: 不存在值为nm的单元格')
     else:
-        arr: ndarray = df.loc[indices[0][0]:,indices[0][1]:].to_numpy()
-        name: str = f'{filename}-{str(arr[0][1])}'
-        arr[0,1] = name
+        arr: ndarray = df.loc[indices[0][0]+1:,indices[0][1]:].to_numpy() ## 从索引开始到最后一列的值,去除header行
         return {filename: arr}
 
 # 数据前处理

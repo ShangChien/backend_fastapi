@@ -107,17 +107,21 @@ class taskQueue:
 def submit_task(data: Any, func: str, name:str, dir_path: str, designer: str,stamp:float) -> int:
     date_time = datetime.fromtimestamp(stamp)
     data_str = date_time.strftime("%Y%m%d")
+
     # 新建任务文件夹
     path=P('/root/task',dir_path.strip(' /'),data_str,name)
     path.mkdir(mode=0o755, parents=True, exist_ok=True)
+
     # 新建分子结构文件
     path_structure=P(path, name+'.mol')
     path_structure.write_text(data)
+
     # 新建排队脚本任务模板
     template=func
     path_submit = P(path, 'task_submit.queue')
     path_submit_absolute = path_submit.absolute().as_posix()
     path_submit.write_text(template)
+
     # 提交任务
     completed_process = subprocess.run(['qsub', path_submit_absolute], text=True, capture_output=True)
     if completed_process.returncode == 0:
@@ -175,7 +179,7 @@ async def worker(queue: taskQueue):
 async def create_queue(app: FastAPI):
     # 程序启动时执行的钩子函数:
     # 1. 载入uv数据
-    with open('./uv_data.pkl','rb') as f:
+    with open('./uv_data_with_types.pkl','rb') as f:
         app.state.uv_data = pickle.load(f)
 
     # 2. 启动任务队列 
@@ -186,7 +190,7 @@ async def create_queue(app: FastAPI):
 async def destroy_queue(app: FastAPI):
     # 程序结束时执行的钩子函数
     # 1.持久化uv_data.pkl
-    with open('./uv_data.pkl','wb') as f:
+    with open('./uv_data_with_types.pkl','wb') as f:
         pickle.dump(app.state.uv_data, f)
 
     # 2.关闭任务队列
