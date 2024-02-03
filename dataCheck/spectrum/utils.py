@@ -11,6 +11,8 @@ from scipy.special import voigt_profile
 import numpy as np
 from functools import partial
 from scipy.optimize import minimize
+from scipy.spatial.distance import cdist
+from scipy.sparse import csr_matrix
 import logger_config
 from logging import Logger
 
@@ -185,4 +187,28 @@ def iter_peaks(x_data, y_data, iter_num:int|None = None, results:list[dict] = []
     except Exception as e:
         print(f'peak process error in the last {iter_num} iteration: {e}')
         return results
-    
+
+def cosine_similarity(target:list[float], matrix:ndarray)-> list[float]:
+    """
+    计算两个向量的余弦相似度
+
+    Args:
+        put_op: PutOperation 对象.
+        matrix: 一个二维数组.
+
+    Returns:
+        余弦相似度.
+    """
+    data_matrix_sparse = csr_matrix(matrix)
+  
+    # 稀疏数组
+    target_array_sparse = csr_matrix(target)  # (1, 401)
+  
+    # 将稀疏矩阵转换为密集格式
+    data_matrix_dense = data_matrix_sparse.toarray()
+    target_array_dense = target_array_sparse.toarray()
+  
+    # 计算余弦相似度
+    similarities = 1 - cdist(target_array_dense, data_matrix_dense, metric='cosine')
+    return similarities.reshape(-1).tolist()
+

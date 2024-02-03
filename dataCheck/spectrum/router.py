@@ -1,11 +1,9 @@
 from typing import Any
 from fastapi import APIRouter, Request, Body
-from dataCheck.spectrum.utils import get_peaks,pre_process
-from dataCheck.spectrum.type import RES, UVdata, GetData
+from dataCheck.spectrum.utils import get_peaks,pre_process,cosine_similarity
+from dataCheck.spectrum.type import RES, UVData, GetData, Result
 import numpy as np
 import asyncio
-from scipy.spatial.distance import cdist
-from scipy.sparse import csr_matrix
 
 semaphore = asyncio.Semaphore(1)
 
@@ -14,37 +12,37 @@ router = APIRouter(
     tags=["spectrum"],
 )
 
-@router.get("/get_fig_name_list")
+@router.get("/get_names")
 async def get_fig_name_list(req: Request) -> RES[list[str]]: 
-    uv_data: dict[str,UVdata] = req.app.state.uv_data
+    uv_data: dict[str,UVData] = req.app.state.uv_data
     nameList: list[str] = [k for k in uv_data]
     return RES[list[str]](data = nameList)
 
-@router.post("/get_uv_data")
-async def get_uv_data(req: Request, data: GetData= Body()) -> RES[UVdata]: 
-    uv_res = UVdata(name='',raw_arr=[],peaks_arr=[])
-    uv_data: dict[str,UVdata] = req.app.state.uv_data
+@router.post("/get")
+async def get_uv_data(req: Request, data: GetData= Body()) -> RES[UVData]: 
+    uv_res = UVData(name='',raw_arr=[],peaks_arr=[])
+    uv_data: dict[str,UVData] = req.app.state.uv_data
     if data.name in uv_data:
-        uv_res: UVdata = uv_data[data.name]
-        return RES[UVdata](data = uv_res)
-    return RES[UVdata](error = f'parameter error: no data named {data.name}')
+        uv_res: UVData = uv_data[data.name]
+        return RES[UVData](data = uv_res)
+    return RES[UVData](error = f'parameter error: no data named {data.name}', success=False)
     
 
-@router.post("/del_uv_data")
+@router.post("/del")
 async def del_uv_data(req: Request, data: GetData = Body()) -> RES[str]: 
-    uv_data: dict[str,UVdata] = req.app.state.uv_data
+    uv_data: dict[str,UVData] = req.app.state.uv_data
     if data.name in uv_data:
         async with semaphore:
             del uv_data[data.name]
             return RES[str](data = f'successful delete {data.name}')
-    return RES[str](data = f'no data named {data.name}')
+    return RES[str](data = f'no data named {data.name}', success=False)
 
-@router.post("/put_uv_data")
-async def put_uv_data(req: Request, data: UVdata = Body()) -> RES[str]: 
+@router.post("/put")
+async def put_uv_data(req: Request, data: UVData = Body()) -> RES[list[float]]: 
     ## print(data,query(data))
-    uv_data: dict[str,UVdata] = req.app.state.uv_data
+    uv_data: dict[str,UVData] = req.app.state.uv_data
     if len(data.raw_arr) != 401:
-        return RES[str](error = 'parameter error: raw_arr length must be 401')
+        return RES(error = 'parameter error: raw_arr length must be 401', success=False)
     try:
         y_data,_scalar = pre_process(data.raw_arr[:,1][::-1]) # type: ignore
         peaks_indices = get_peaks(y_data)
@@ -53,28 +51,25 @@ async def put_uv_data(req: Request, data: UVdata = Body()) -> RES[str]:
         data.peaks_arr = peaks_arr.tolist()
         async with semaphore:
             uv_data[data.name]=data
-        return RES[str](data=f'success updated {data.name}')
+        return RES(data=data.peaks_arr)
     except Exception as e:
-        return RES[str](error = f'fail to update with error: {e}')
+        return RES(error = f'fail to update with error: {e}', success=False)
 
-@router.post("/check_uv_data")
-async def check_uv_data(req: Request, data: UVdata = Body()) -> RES[list[float]]:
-    uv_data: dict[str,UVdata] = req.app.state.uv_data 
+@router.post("/check")
+async def check_uv_data(req: Request, data: UVData = Body()) -> RES[list[Result]]:
+    uv_data: dict[str,UVData] = req.app.state.uv_data 
     ## 先put uvdata
-    _result: RES[str] = await put_uv_data(req, data)
-    ## 对比返回结果
+    put_op: RES[list[float]] = await put_uv_data(req, data)
+    if not put_op.success or not put_op.data:
+        return RES(error=put_op.error, success=False)
+    
+    ## 获取所有数据拼接为矩阵
+    names=[key for key in uv_data]
     all_arr: list[Any] = [uv_data[i].peaks_arr for i in uv_data]
     matrix = np.concatenate(all_arr).reshape(-1,401)
-    data_matrix_sparse = csr_matrix(matrix)
-  
-    # 稀疏数组
-    target_array_sparse = csr_matrix(data.peaks_arr)  # (1, 401)
-  
-    # 将稀疏矩阵转换为密集格式
-    data_matrix_dense = data_matrix_sparse.toarray()
-    target_array_dense = target_array_sparse.toarray()
-  
-    # 计算余弦相似度
-    similarities = 1 - cdist(target_array_dense, data_matrix_dense, metric='cosine')
-  
-    return RES[list[float]](data=similarities[0])
+
+    similarities: list[float] = cosine_similarity(put_op.data, matrix)
+
+    res: list[Result]=[Result(name=k,similarity=v) for k,v in zip(names,similarities)]
+
+    return RES(data=res)

@@ -7,5 +7,5 @@
 	// 	"--ignore E501"
 	// ],
 	"python.analysis.typeCheckingMode": "basic",
-	"python.analysis.autoImportCompletions": true
+	"python.analysis.autoImportCompletions": false
 }
