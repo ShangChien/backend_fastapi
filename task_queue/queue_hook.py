@@ -179,7 +179,7 @@ async def worker(queue: taskQueue):
 async def create_queue(app: FastAPI):
     # 程序启动时执行的钩子函数:
     # 1. 载入uv数据
-    with open('./uv_data_with_types.pkl','rb') as f:
+    with open('./uv_data.pkl','rb') as f:
         app.state.uv_data = pickle.load(f)
 
     # 2. 启动任务队列 
@@ -190,7 +190,7 @@ async def create_queue(app: FastAPI):
 async def destroy_queue(app: FastAPI):
     # 程序结束时执行的钩子函数
     # 1.持久化uv_data.pkl
-    with open('./uv_data_with_types.pkl','wb') as f:
+    with open('./uv_data.pkl','wb') as f:
         pickle.dump(app.state.uv_data, f)
 
     # 2.关闭任务队列

@@ -1,5 +1,6 @@
 import uvicorn
 from fastapi import FastAPI
+from tblite.ase import TBLite
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from dataCheck.router import router as data_check_router
