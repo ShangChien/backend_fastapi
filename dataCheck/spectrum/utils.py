@@ -72,7 +72,7 @@ def pre_process(data:ndarray)-> tuple[ndarray, MinMaxScaler]:
     scaler = MinMaxScaler()
     arr_normalized = scaler.fit_transform(data.reshape(-1,1)).reshape(-1)
     arr_normalized = signal.savgol_filter(arr_normalized, window_length=10, polyorder=2)
-    return arr_normalized, scaler
+    return arr_normalized.tolist(), scaler
 
 ## 寻找峰值
 def get_peaks(data:ndarray, threshold=10)-> list[int]:

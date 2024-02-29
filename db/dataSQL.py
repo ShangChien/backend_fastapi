@@ -33,7 +33,7 @@ def convert2SQLstr(item:searchItem) -> str:
   lower:float = 0.0
   upper:float = 0.0
   if isinstance(item.value, List) & isinstance(item.value[0], float) & isinstance(item.value[1], float) :
-    item_value: list[float] = [float(i) for i in item.value]
+    item_value: list[float] = [float(i) for i in item.value[:2]]
     lower = item_value[0] if item_value[0] <= item_value[1] else item_value[1]
     upper = item_value[1] if item_value[0] <= item_value[1] else item_value[0]
   itemStr=''

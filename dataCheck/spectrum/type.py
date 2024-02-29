@@ -8,7 +8,7 @@ class GetData(BaseModel):
 
 class UVData(BaseModel):
     name: str
-    raw_arr: list[list[int|float]]
+    raw_arr: list[int|float]
     peaks_arr: list[int|float] | None = []
     
 class Result(BaseModel):

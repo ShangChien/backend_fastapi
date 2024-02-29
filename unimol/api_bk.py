@@ -1,10 +1,10 @@
 import logging
-logger = logging.getLogger("__main__")
 from pydantic import BaseModel
 from typing import Any
 from rdkit import Chem
 from rdkit.Chem import rdDepictor
 from rdkit.Chem import rdDistGeom
+logger = logging.getLogger("__main__")
 rdDepictor.SetPreferCoordGen(True)
 etkdg = rdDistGeom.ETKDGv3()
 etkdg.randomSeed = 0xa700f
