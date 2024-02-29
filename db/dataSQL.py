@@ -47,7 +47,7 @@ def convert2SQLstr(item:searchItem) -> str:
       operate = '@='
     itemStr = f"(m{operate}'{item.value[1]}')"
   elif(item.key=='similarity'):
-    itemStr = f'(tanimoto_sml(morganbv_fp(mol_from_smiles({item.value[2]}),2), bfp) BETWEEN {lower} AND {upper})'
+    itemStr = f"(tanimoto_sml(morganbv_fp(mol_from_smiles('{item.value[2]}'),2), bfp) BETWEEN {lower} AND {upper})"
   elif (item.key=='mw'):
     itemStr = f'(mol_amw(m) BETWEEN {lower} AND {upper})'
   elif (item.key=='date'):
