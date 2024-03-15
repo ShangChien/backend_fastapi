@@ -104,7 +104,7 @@ def gen3D(molBlocks: list[str] | None, smiles: list[str] | None) -> RES[dataUnim
                 # 规范化文件格式版本
                 lines[3] = lines[3].rstrip()[:-9] + '0999 V2000'
                 molBlock = '\n'.join(lines)
-                # 替换不能识别键的类型为单键
+                # 替换未知类型的键为单键, 由于unimol不识别键的类型, 所以能让molBlock通过rdkit解析就好了
                 molBlock = molBlock.replace(' 4  0  0  0', ' 1  0  0  0')
 
             isPlaneStruct = []
